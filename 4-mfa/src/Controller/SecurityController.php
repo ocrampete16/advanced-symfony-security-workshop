@@ -11,6 +11,7 @@
 
 namespace App\Controller;
 
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,6 +51,17 @@ class SecurityController extends AbstractController
             // last username entered by the user (if any)
             'last_username' => $helper->getLastUsername(),
             // last authentication error (if any)
+            'error' => $helper->getLastAuthenticationError(),
+        ]);
+    }
+
+    /**
+     * @Route("/login/email", name="security_login_email")
+     * @IsGranted("IS_PARTIALLY_AUTHENTICATED")
+     */
+    public function loginEmailCode(AuthenticationUtils $helper): Response
+    {
+        return $this->render('security/login_email.html.twig', [
             'error' => $helper->getLastAuthenticationError(),
         ]);
     }
