@@ -30,6 +30,8 @@ security:
             guard:
                 authenticators:
                     - App\Security\GuardAuthenticator
+                    - App\Security\EmailAuthenticator
+                entry_point: App\Security\GuardAuthenticator
 
             logout:
                 # The route name the user can go to in order to logout

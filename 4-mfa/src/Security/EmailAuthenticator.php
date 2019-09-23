@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Mailer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Security\Core\Exception\InvalidCsrfTokenException;
-use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
@@ -20,30 +19,30 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Guard\Authenticator\AbstractFormLoginAuthenticator;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
 
-final class GuardAuthenticator extends AbstractFormLoginAuthenticator
+final class EmailAuthenticator extends AbstractFormLoginAuthenticator
 {
     use TargetPathTrait;
 
-    private const LOGIN_ROUTE = 'security_login';
+    private const LOGIN_ROUTE = 'security_login_email';
 
     private $router;
     private $csrfTokenManager;
     private $passwordEncoder;
+    private $tokenStorage;
     private $verificationCodeBroker;
-    private $mailer;
 
     public function __construct(
         RouterInterface $router,
         CsrfTokenManagerInterface $csrfTokenManager,
         UserPasswordEncoderInterface $passwordEncoder,
-        VerificationCodeBroker $verificationCodeBroker,
-        Mailer $mailer
+        TokenStorageInterface $tokenStorage,
+        VerificationCodeBroker $verificationCodeBroker
     ) {
         $this->router = $router;
         $this->csrfTokenManager = $csrfTokenManager;
         $this->passwordEncoder = $passwordEncoder;
+        $this->tokenStorage = $tokenStorage;
         $this->verificationCodeBroker = $verificationCodeBroker;
-        $this->mailer = $mailer;
     }
 
     protected function getLoginUrl()
@@ -59,12 +58,9 @@ final class GuardAuthenticator extends AbstractFormLoginAuthenticator
     public function getCredentials(Request $request)
     {
         $credentials = [
-            'email' => $request->request->get('_username'),
-            'password' => $request->request->get('_password'),
+            'code' => $request->request->get('code'),
             'csrf_token' => $request->request->get('_csrf_token'),
         ];
-
-        $this->getSession($request)->set(Security::LAST_USERNAME, $credentials['email']);
 
         return $credentials;
     }
@@ -76,33 +72,25 @@ final class GuardAuthenticator extends AbstractFormLoginAuthenticator
             throw new InvalidCsrfTokenException();
         }
 
-        return $userProvider->loadUserByUsername($credentials['email']);
+        return $userProvider->loadUserByUsername($this->getToken()->getUsername());
     }
 
     public function checkCredentials($credentials, UserInterface $user)
     {
-        return $this->passwordEncoder->isPasswordValid($user, $credentials['password']);
-    }
-
-    public function createAuthenticatedToken(UserInterface $user, $providerKey)
-    {
-        return new MidAuthenticationGuardToken($user);
+        return $this->verificationCodeBroker->check($this->getToken(), $credentials['code']);
     }
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, $providerKey)
     {
-        $code = $this->verificationCodeBroker->generateFor($token);
-        $this->mailer->sendCodeVerificationMail($token, $code);
-
-        return new RedirectResponse($this->router->generate('security_login_email'));
+        return new RedirectResponse($this->router->generate('blog_index'));
     }
 
-    private function getSession(Request $request): SessionInterface
+    private function getToken(): TokenInterface
     {
-        if (!$session = $request->getSession()) {
-            throw new \RuntimeException('No session is associated with the current request.');
+        if (!$token = $this->tokenStorage->getToken()) {
+            throw new \RuntimeException('No token found in token storage.');
         }
 
-        return $session;
+        return $token;
     }
 }
