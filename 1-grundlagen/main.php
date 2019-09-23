@@ -2,45 +2,20 @@
 
 require_once 'vendor/autoload.php';
 
-use Symfony\Component\Security\Core\Authentication\AuthenticationProviderManager;
-use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\Authorization\AccessDecisionManager;
 use Symfony\Component\Security\Core\Authorization\Voter\RoleVoter;
-use Symfony\Component\Security\Core\Encoder\EncoderFactory;
-use Symfony\Component\Security\Core\Encoder\PlaintextPasswordEncoder;
-use Symfony\Component\Security\Core\User\InMemoryUserProvider;
-use Symfony\Component\Security\Core\User\User;
-use Symfony\Component\Security\Core\User\UserChecker;
 
 const PROVIDER_KEY = 'default';
 
 // WRITE CODE AFTER THIS
 
-$userProvider = new InMemoryUserProvider([
-    'admin' => [
-        'password' => 'admin-password',
-        'roles' => ['ROLE_ADMIN'],
-    ],
-    'user' => [
-        'password' => 'user-password',
-        'roles' => ['ROLE_USER'],
-    ],
-    'never' => [
-        'password' => 'never-password',
-        'roles' => [],
-    ],
-]);
-
-$userChecker = new UserChecker();
-
-$encoderFactory = new EncoderFactory([
-    User::class => new PlaintextPasswordEncoder(),
-]);
-
-$authenticationManager = new AuthenticationProviderManager([
-    new DaoAuthenticationProvider($userProvider, $userChecker, PROVIDER_KEY, $encoderFactory),
-]);
+/**
+ * Verwenden solltet ihr:
+ * - InMemoryUserProvider
+ * - PlaintextPasswordEncoder
+ * - DaoAuthenticationProvider
+ */
 
 // WRITE CODE BEFORE THIS
 
